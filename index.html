@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+<title>WareServer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d1117;--sidebar:#0d1117;--surface:#161b22;--surface2:#1c2230;--surface3:#21283a;--border:#243044;--accent:#1a9fff;--accent-glow:rgba(26,159,255,.15);--accent-dim:rgba(26,159,255,.08);--text:#e6edf3;--text2:#8b949e;--text3:#484f58;--success:#3fb950;--danger:#f85149;--warn:#d29922;--sans:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;--radius:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;-webkit-font-smoothing:antialiased}
+.titlebar{height:38px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:8px;-webkit-app-region:drag;flex-shrink:0;position:relative;z-index:100}
+.tb-dots{display:flex;gap:6px;-webkit-app-region:no-drag}
+.tb-dot{width:12px;height:12px;border-radius:50%;cursor:pointer;transition:filter .15s}
+.tb-dot:hover{filter:brightness(1.2)}
+.dot-r{background:#ff5f57}.dot-y{background:#febc2e}.dot-g{background:#28c840}
+.tb-logo{display:flex;align-items:center;gap:7px;margin-left:8px}
+.tb-logo svg{width:18px;height:18px;color:var(--accent)}
+.tb-title{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.3px}
+.tb-title span{color:var(--text)}
+.layout{display:flex;height:calc(100vh - 38px);overflow:hidden}
+.sidebar{width:52px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.sb-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);transition:all .15s;position:relative}
+.sb-icon:hover{background:var(--surface2);color:var(--text2)}
+.sb-icon.active{background:var(--accent-dim);color:var(--accent)}
+.sb-icon.active::before{content:'';position:absolute;left:-1px;top:20%;bottom:20%;width:2px;background:var(--accent);border-radius:0 2px 2px 0}
+.sb-icon svg{width:18px;height:18px}
+.sb-spacer{flex:1}
+.sb-status{width:8px;height:8px;border-radius:50%;background:var(--text3);margin-bottom:8px;transition:all .3s}
+.sb-status.running{background:var(--success);box-shadow:0 0 6px var(--success);animation:blink 2s infinite}
+.sb-status.starting{background:var(--warn);box-shadow:0 0 6px var(--warn);animation:blink .6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.page-header{padding:18px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.page-title{font-size:18px;font-weight:700;color:var(--text)}
+.header-right{display:flex;align-items:center;gap:10px}
+.status-chip{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;font-weight:600}
+.status-chip-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:all .3s}
+.status-chip-dot.running{background:var(--success);box-shadow:0 0 6px var(--success)}
+.status-chip-dot.starting{background:var(--warn);animation:blink .6s infinite}
+.page{display:none;flex:1;overflow:hidden;flex-direction:column}
+.page.active{display:flex}
+.dash-body{flex:1;display:flex;overflow:hidden}
+.dash-left{flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;border-right:1px solid var(--border)}
+.dash-left::-webkit-scrollbar{width:4px}
+.dash-left::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.dash-right{width:220px;padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex-shrink:0}
+.hero-card{background:linear-gradient(135deg,#0d1f35 0%,#0d1528 50%,#0a1220 100%);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;min-height:140px;display:flex;flex-direction:column;justify-content:flex-end}
+.hero-card::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(26,159,255,.12) 0%,transparent 70%);pointer-events:none}
+.hero-tag{position:absolute;top:14px;left:14px;background:rgba(26,159,255,.15);border:1px solid rgba(26,159,255,.25);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;color:var(--accent);letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;gap:5px}
+.hero-tag::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 4px var(--accent)}
+.hero-name{font-size:28px;font-weight:700;color:var(--text);line-height:1.1;margin-bottom:4px}
+.hero-sub{font-family:var(--mono);font-size:11px;color:var(--accent);opacity:.8}
+.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-label{font-size:9px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
+.stat-value{font-size:18px;font-weight:700;color:var(--text);line-height:1}
+.stat-value.accent{color:var(--accent)}.stat-value.success{color:var(--success)}
+.stat-sub{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px}
+.stat-bar{margin-top:10px;height:2px;background:var(--border);border-radius:2px;overflow:hidden}
+.stat-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s ease}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.section-card-header{padding:12px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.section-card-header span{color:var(--text2);font-weight:500}
+.player-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(36,48,68,.5)}
+.player-row:last-child{border-bottom:none}
+.player-av{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#0066cc);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0}
+.player-name{flex:1;font-weight:600;font-size:13px}
+.player-ping{font-family:var(--mono);font-size:11px;color:var(--success)}
+.empty-state{padding:18px;text-align:center;font-size:12px;color:var(--text3)}
+.panel-label{font-size:9px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px}
+.info-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.info-box-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.info-box-addr{font-family:var(--mono);font-size:12px;color:var(--accent);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px;transition:color .15s;flex-shrink:0}
+.icon-btn:hover{color:var(--accent)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding-top:8px;border-top:1px solid var(--border)}
+.info-grid-cell .lbl{font-size:8px;color:var(--text3);letter-spacing:.8px}
+.info-grid-cell .val{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#3db0ff;transform:translateY(-1px);box-shadow:0 4px 16px rgba(26,159,255,.3)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.btn-danger{background:rgba(248,81,73,.1);color:var(--danger);border:1px solid rgba(248,81,73,.2)}
+.btn-danger:hover{background:rgba(248,81,73,.18);border-color:var(--danger)}
+.btn-danger:disabled{opacity:.35;cursor:not-allowed}
+.btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:6px}
+.btn-full{width:100%}
+.launch-bar{height:56px;border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0}
+.launch-btn{flex:1;height:38px;background:var(--accent);border:none;border-radius:8px;color:white;font-family:var(--sans);font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+.launch-btn:hover{background:#3db0ff;box-shadow:0 0 20px rgba(26,159,255,.3)}
+.launch-btn:disabled{background:var(--surface3);color:var(--text3);cursor:not-allowed;box-shadow:none}
+.launch-btn.stopping{background:rgba(248,81,73,.12);color:var(--danger);border:1px solid rgba(248,81,73,.3)}
+.repair-btn{height:38px;padding:0 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;flex-shrink:0}
+.repair-btn:hover{border-color:var(--accent);color:var(--accent)}
+.console-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.console-output{flex:1;overflow-y:auto;padding:14px 18px;font-family:var(--mono);font-size:11.5px;line-height:1.9;background:#0a0e14}
+.console-output::-webkit-scrollbar{width:4px}
+.console-output::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.log-line{display:block}.log-info{color:#7a8898}.log-warn{color:var(--warn)}.log-error{color:var(--danger)}.log-success{color:var(--success)}.log-join{color:var(--accent)}.log-time{color:#3a4555;margin-right:8px}
+.console-input-bar{display:flex;align-items:center;background:var(--surface);border-top:1px solid var(--border);padding:0 14px;gap:8px}
+.console-prompt{color:var(--accent);font-family:var(--mono);font-size:13px;flex-shrink:0}
+.console-input{flex:1;background:transparent;border:none;outline:none;font-family:var(--mono);font-size:12.5px;color:var(--text);padding:13px 0;caret-color:var(--accent)}
+.console-send{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 4px;transition:color .15s}
+.console-send:hover{color:var(--accent)}
+.files-wrap{flex:1;display:flex;flex-direction:column;padding:14px 16px;gap:12px;overflow:hidden}
+.files-toolbar{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.breadcrumb{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-family:var(--mono);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px;overflow:hidden}
+.bc-seg{cursor:pointer;transition:color .15s}.bc-seg:hover{color:var(--accent)}.bc-sep{color:var(--text3)}
+.drop-zone{border:1.5px dashed var(--border);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:all .2s;flex-shrink:0}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:var(--accent-dim)}
+.drop-zone-text{font-size:12px;color:var(--text3)}.drop-zone-text span{color:var(--accent)}
+.file-table{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.file-table-head{display:grid;grid-template-columns:28px 1fr 80px 100px 72px;gap:10px;padding:9px 14px;font-size:9px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0}
+.file-rows{flex:1;overflow-y:auto}
+.file-rows::-webkit-scrollbar{width:4px}
+.file-rows::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.file-row{display:grid;grid-template-columns:28px 1fr 80px 100px 72px;gap:10px;padding:9px 14px;align-items:center;border-bottom:1px solid rgba(36,48,68,.4);cursor:pointer;transition:background .1s}
+.file-row:hover{background:var(--surface2)}.file-row:last-child{border-bottom:none}
+.file-icon{font-size:14px;text-align:center}.file-name{font-weight:500;color:var(--text);font-size:12.5px}.file-name.folder{color:var(--accent)}
+.file-sz{font-family:var(--mono);font-size:10.5px;color:var(--text3)}.file-dt{font-family:var(--mono);font-size:10.5px;color:var(--text3)}
+.file-acts{display:flex;gap:5px;opacity:0;transition:opacity .15s}.file-row:hover .file-acts{opacity:1}
+.fa-btn{background:var(--surface3);border:1px solid var(--border);color:var(--text3);border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;transition:all .15s;font-family:var(--mono)}
+.fa-btn:hover{border-color:var(--accent);color:var(--accent)}.fa-btn.del:hover{border-color:var(--danger);color:var(--danger)}
+.settings-wrap{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.settings-wrap::-webkit-scrollbar{width:4px}
+.settings-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.settings-section-title{padding:11px 16px;border-bottom:1px solid var(--border);font-size:9px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;background:var(--surface2)}
+.setting-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(36,48,68,.4);gap:16px}
+.setting-row:last-child{border-bottom:none}
+.setting-info{flex:1}.setting-name{font-size:13px;font-weight:500;color:var(--text)}.setting-desc{font-size:11px;color:var(--text3);margin-top:2px}
+.setting-input{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 10px;width:160px;outline:none;transition:border-color .15s}
+.setting-input:focus{border-color:var(--accent)}
+.setting-select{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 10px;width:160px;outline:none;cursor:pointer}
+.toggle{width:38px;height:20px;border-radius:10px;background:var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;width:14px;height:14px;background:white;border-radius:50%;top:3px;left:3px;transition:transform .2s}
+.toggle.on::after{transform:translateX(18px)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:460px;overflow:hidden;animation:mpop .18s ease}
+@keyframes mpop{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;transition:color .15s;padding:2px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:11px;font-weight:600;color:var(--text3)}
+.form-row{display:flex;gap:8px}
+.form-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:9px 12px;outline:none;width:100%;transition:border-color .15s}
+.form-input:focus{border-color:var(--accent)}
+.form-select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:9px 12px;outline:none;width:100%;cursor:pointer}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.upload-queue{position:fixed;bottom:68px;right:16px;width:280px;display:flex;flex-direction:column;gap:6px;z-index:150}
+.upload-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;animation:sup .2s ease}
+@keyframes sup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.upload-name{font-family:var(--mono);font-size:10.5px;color:var(--text2);margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upload-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden}
+.upload-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+.upload-stat{font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:5px}
+.notif{position:fixed;top:50px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;font-weight:500;z-index:300;transition:all .25s ease;opacity:0;pointer-events:none;white-space:nowrap}
+.notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.notif.success{border-color:rgba(63,185,80,.4);color:var(--success)}
+.notif.error{border-color:rgba(248,81,73,.4);color:var(--danger)}
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <div class="tb-dots">
+    <div class="tb-dot dot-r" id="btn-close"></div>
+    <div class="tb-dot dot-y" id="btn-min"></div>
+    <div class="tb-dot dot-g" id="btn-max"></div>
+  </div>
+  <div class="tb-logo">
+    <svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="12" rx="8" ry="3.5" stroke="currentColor" stroke-width="1.5" fill="none" transform="rotate(-35 12 12)"/><ellipse cx="12" cy="12" rx="8" ry="3.5" stroke="currentColor" stroke-width="1.5" fill="none" transform="rotate(35 12 12)"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+    <span class="tb-title"><span>WareServer</span> Manager</span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sb-icon active" id="nav-dashboard" title="Dashboard">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+    </div>
+    <div class="sb-icon" id="nav-console" title="Console">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10l1.41 1.41L5.83 13l1.58 1.59L6 16l-3-3 3-3zm12 6h-7v-2h7v2z"/></svg>
+    </div>
+    <div class="sb-icon" id="nav-files" title="Files">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+    </div>
+    <div class="sb-icon" id="nav-settings" title="Settings">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+    </div>
+    <div class="sb-icon" id="nav-tunnel" title="Tunnel">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4 2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+    </div>
+    <div class="sb-spacer"></div>
+    <div class="sb-status" id="sbStatus"></div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">WareServer</div>
+        <div class="header-right">
+          <div class="status-chip">
+            <div class="status-chip-dot" id="chipDot"></div>
+            <span id="chipLabel" style="color:var(--text3)">Offline</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="btn-new-server">＋ New Server</button>
+        </div>
+      </div>
+      <div class="dash-body">
+        <div class="dash-left">
+          <div class="hero-card">
+            <div class="hero-tag">Skyware Server</div>
+            <div class="hero-name" id="heroName">No Server</div>
+            <div class="hero-sub" id="heroSub">Configure a server to get started</div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-label">Version</div>
+              <div class="stat-value accent" id="statVersion">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Status</div>
+              <div class="stat-value" id="statStatus" style="color:var(--text3)">Offline</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Uptime</div>
+              <div class="stat-value" id="statUptime">—</div>
+              <div class="stat-sub" id="statUptimeSub">not running</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Memory Usage</div>
+            <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">
+              <div class="stat-value" id="statRam">—</div>
+              <div class="stat-sub">/ <span id="statRamMax">2048</span> MB</div>
+            </div>
+            <div class="stat-bar"><div class="stat-bar-fill" id="ramBarFill" style="width:0%"></div></div>
+          </div>
+          <div class="section-card">
+            <div class="section-card-header">Players Online <span><span id="playerCount">0</span> / <span id="maxPlayersDisp">20</span></span></div>
+            <div id="playersList"><div class="empty-state">No players online</div></div>
+          </div>
+        </div>
+        <div class="dash-right">
+          <div>
+            <div class="panel-label">Server Address</div>
+            <div class="info-box">
+              <div class="info-box-row">
+                <div class="info-box-addr" id="addrText">localhost:25565</div>
+                <button class="icon-btn" title="Copy">⧉</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="panel-label">Memory (RAM)</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;color:var(--text3)">allocated</span>
+              <span style="font-size:13px;font-weight:600;color:var(--text)" id="ramDisplayVal">2 GB</span>
+            </div>
+            <input type="range" id="ramSlider" min="512" max="8192" step="512" value="2048"
+              style="width:100%;accent-color:var(--accent);cursor:pointer">
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:3px"><span>512 MB</span><span>8 GB</span></div>
+          </div>
+          <div>
+            <div class="panel-label">Server</div>
+            <div class="info-box">
+              <div class="info-box-row">
+                <div id="srvDot" style="width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0"></div>
+                <div style="font-family:var(--mono);font-size:11px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 6px" id="srvAddrLine">Not configured</div>
+                <button class="icon-btn" title="Refresh">↻</button>
+              </div>
+              <div class="info-grid">
+                <div class="info-grid-cell"><div class="lbl">PLAYERS</div><div class="val" id="infoPlayers">—</div></div>
+                <div class="info-grid-cell"><div class="lbl">PORT</div><div class="val" id="infoPort">—</div></div>
+                <div class="info-grid-cell"><div class="lbl">RAM</div><div class="val" id="infoRam">—</div></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-sm btn-full" id="killBtn" disabled>⬛ Force Stop</button>
+        </div>
+      </div>
+      <div class="launch-bar">
+        <button class="launch-btn" id="launchBtn">▶ LAUNCH</button>
+        <button class="repair-btn" id="btn-configure">⚙ Configure</button>
+      </div>
+    </div>
+
+    <!-- CONSOLE -->
+    <div class="page" id="page-console">
+      <div class="page-header">
+        <div class="page-title">Console</div>
+        <div class="header-right"><button class="btn btn-ghost btn-sm" id="btn-clear-console">Clear</button></div>
+      </div>
+      <div class="console-wrap">
+        <div class="console-output" id="consoleOutput">
+          <span class="log-line log-info"><span class="log-time">[--:--:--]</span>WareServer ready. Start a server to see output.</span><br>
+        </div>
+        <div class="console-input-bar">
+          <span class="console-prompt">$</span>
+          <input class="console-input" id="consoleInput" placeholder="Enter command...">
+          <button class="console-send" id="btn-console-send">↵</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILES -->
+    <div class="page" id="page-files">
+      <div class="page-header">
+        <div class="page-title">Files</div>
+        <div class="header-right">
+          <button class="btn btn-ghost btn-sm" id="btn-upload">↑ Upload</button>
+          <button class="btn btn-ghost btn-sm" id="btn-files-refresh">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="files-wrap">
+        <div class="files-toolbar">
+          <div class="breadcrumb" id="breadcrumb"><span class="bc-seg">server</span></div>
+        </div>
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-zone-text">Drop files here or <span>browse to upload</span></div>
+        </div>
+        <div class="file-table">
+          <div class="file-table-head"><span></span><span>Name</span><span>Size</span><span>Modified</span><span>Actions</span></div>
+          <div class="file-rows" id="fileRows"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <div class="page-title">Settings</div>
+        <div class="header-right"><button class="btn btn-primary btn-sm" id="btn-settings-save">Save</button></div>
+      </div>
+      <div class="settings-wrap">
+        <div class="settings-section">
+          <div class="settings-section-title">Server</div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Server Name</div></div><input class="setting-input" id="cfg-name" value="My SMP"></div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Port</div><div class="setting-desc">Default: 25565</div></div><input class="setting-input" id="cfg-port" type="number" value="25565"></div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Max Players</div></div><input class="setting-input" id="cfg-maxplayers" type="number" value="20"></div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">MOTD</div></div><input class="setting-input" id="cfg-motd" value="A Minecraft Server"></div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Performance</div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Allocated RAM (MB)</div></div><input class="setting-input" id="cfg-ram" type="number" value="2048"></div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Java Path</div><div class="setting-desc">Leave as "java" if on PATH</div></div><input class="setting-input" id="cfg-java" value="java"></div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Gameplay</div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Online Mode</div><div class="setting-desc">Require Minecraft auth</div></div><div class="toggle on" id="toggle-online" data-key="online"></div></div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Whitelist</div></div><div class="toggle" id="toggle-whitelist" data-key="whitelist"></div></div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">PVP</div></div><div class="toggle on" id="toggle-pvp" data-key="pvp"></div></div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Gamemode</div></div><select class="setting-select" id="cfg-gamemode"><option value="survival">Survival</option><option value="creative">Creative</option><option value="adventure">Adventure</option></select></div>
+          <div class="setting-row"><div class="setting-info"><div class="setting-name">Difficulty</div></div><select class="setting-select" id="cfg-difficulty"><option value="peaceful">Peaceful</option><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TUNNEL -->
+    <div class="page" id="page-tunnel">
+      <div class="page-header">
+        <div class="page-title">Tunnel</div>
+        <div class="header-right">
+          <div class="status-chip">
+            <div class="status-chip-dot" id="tunnelChipDot"></div>
+            <span id="tunnelChipLabel" style="color:var(--text3)">Offline</span>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:flex;gap:16px;align-items:flex-start">
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--accent-dim);border:1px solid rgba(26,159,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">🌐</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:4px">playit.gg Tunnel</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6">No port forwarding required. playit.gg gives your server a permanent public address your friends can connect to from anywhere. Free to use.</div>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+          <div style="padding:11px 16px;border-bottom:1px solid var(--border);font-size:9px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;background:var(--surface2)">Setup</div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:24px;height:24px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(26,159,255,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">1</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">Install playit agent</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Downloads the playit binary to your app data folder</div></div>
+              <button class="btn btn-ghost btn-sm" id="btn-playit-install">Install</button>
+            </div>
+            <div style="height:1px;background:var(--border)"></div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:24px;height:24px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(26,159,255,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">2</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">Create a free account</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Sign up at playit.gg to get your tunnel address</div></div>
+              <button class="btn btn-ghost btn-sm" id="btn-playit-signup">Open playit.gg ↗</button>
+            </div>
+            <div style="height:1px;background:var(--border)"></div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:24px;height:24px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(26,159,255,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">3</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:600">Start tunnel</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Run the agent — on first run it prints a claim URL. Open it in your browser to link your account.</div></div>
+              <button class="btn btn-primary btn-sm" id="btn-playit-toggle">▶ Start</button>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+          <div style="padding:11px 16px;border-bottom:1px solid var(--border);font-size:9px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;background:var(--surface2)">Tunnel Address</div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:13px;color:var(--text3)" id="tunnelAddress">Not connected — start the tunnel to get your address</div>
+            <div style="display:flex;gap:8px">
+              <input id="tunnelAddressInput" placeholder="Paste your playit.gg address here..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 12px;outline:none;">
+              <button class="btn btn-ghost btn-sm" id="btn-set-address" style="flex-shrink:0">Set</button>
+            </div>
+            <div style="font-size:11px;color:var(--text3)">Auto-detected from agent output, or paste manually from your <a href="#" id="link-playit-dashboard" style="color:var(--accent);text-decoration:none">playit.gg dashboard ↗</a></div>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;flex:1;display:flex;flex-direction:column;min-height:160px">
+          <div style="padding:11px 16px;border-bottom:1px solid var(--border);font-size:9px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;background:var(--surface2);display:flex;justify-content:space-between;align-items:center">
+            Agent Output
+            <button class="btn btn-ghost btn-sm" id="btn-playit-clear" style="padding:3px 8px;font-size:10px">Clear</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:12px 16px;font-family:var(--mono);font-size:11.5px;line-height:1.8;background:#0a0e14" id="tunnelLog">
+            <span style="color:#3a4555">Tunnel output will appear here...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="newServerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Configure Server</div>
+      <button class="modal-close" id="btn-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Server Name</label><input class="form-input" id="new-name" value="My SMP"></div>
+      <div class="form-group"><label class="form-label">Server JAR</label><div class="form-row"><input class="form-input" id="new-jar" placeholder="C:\MCServer\paper-1.21.11.jar" style="flex:1"><button class="btn btn-ghost btn-sm" id="btn-browse-jar" style="flex-shrink:0">Browse</button></div></div>
+      <div class="form-group"><label class="form-label">Server Folder</label><div class="form-row"><input class="form-input" id="new-dir" placeholder="C:\MCServer" style="flex:1"><button class="btn btn-ghost btn-sm" id="btn-browse-dir" style="flex-shrink:0">Browse</button></div></div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1"><label class="form-label">Port</label><input class="form-input" id="new-port" type="number" value="25565"></div>
+        <div class="form-group" style="flex:1"><label class="form-label">RAM (MB)</label><input class="form-input" id="new-ram" type="number" value="2048"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="btn-modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="upload-queue" id="uploadQueue"></div>
+<div class="notif" id="notif"></div>
+
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:50px;left:50%;transform:translateX(-50%);background:#1c0a0a;border:1px solid #f85149;color:#f85149;padding:12px 20px;border-radius:8px;font-family:monospace;font-size:12px;z-index:9999;max-width:80vw;word-break:break-all';
+  d.textContent = 'JS Error line ' + line + ': ' + msg;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 10000);
+  return false;
+};
+const S={running:false,starting:false,jarPath:null,serverPath:null,serverName:'My SMP',port:25565,ram:2048,uptimeStart:null,uptimeInterval:null,ramInterval:null,currentPath:[],currentDir:null,settings:{online:true,whitelist:false,pvp:true,gamemode:'survival',difficulty:'normal',motd:'A Minecraft Server',maxPlayers:20}};
+const ipc=window.api;
+
+if(ipc){
+  ipc.onLog(({type,text})=>{
+    appendLog(type,text);
+    if(text.includes('joined the game'))addPlayer(text.split(' joined')[0].trim().split(' ').pop());
+    if(text.includes('left the game'))removePlayer(text.split(' left')[0].trim().split(' ').pop());
+    if(text.includes('Done (')&&text.includes('!')){
+      S.starting=false;S.running=true;S.uptimeStart=Date.now();
+      setStatus('running');startUptimeCounter();startRamSim();notify('Server started!','success');
+    }
+  });
+  ipc.onStopped(()=>{S.running=false;S.starting=false;setStatus('stopped');});
+  (async()=>{const saved=await ipc.settingsLoad();if(saved)applySettings(saved);})();
+}
+
+function applySettings(s){
+  S.serverName=s.serverName||S.serverName;S.jarPath=s.jarPath||null;S.serverPath=s.serverPath||null;
+  S.port=s.port||25565;S.ram=s.ram||2048;if(s.settings)Object.assign(S.settings,s.settings);
+  applyToUI();if(S.serverPath){S.currentDir=S.serverPath;renderFiles();}
+}
+
+function applyToUI(){
+  setHero();
+  document.getElementById('addrText').textContent='localhost:'+S.port;
+  document.getElementById('infoPort').textContent=S.port;
+  document.getElementById('infoRam').textContent=(S.ram>=1024?(S.ram/1024).toFixed(1)+'G':S.ram+'M');
+  document.getElementById('srvAddrLine').textContent=S.serverPath||'Not configured';
+  document.getElementById('cfg-name').value=S.serverName;
+  document.getElementById('cfg-port').value=S.port;
+  document.getElementById('cfg-ram').value=S.ram;
+  document.getElementById('cfg-maxplayers').value=S.settings.maxPlayers;
+  document.getElementById('cfg-motd').value=S.settings.motd;
+  document.getElementById('cfg-gamemode').value=S.settings.gamemode;
+  document.getElementById('cfg-difficulty').value=S.settings.difficulty;
+  document.getElementById('statRamMax').textContent=S.ram;
+  document.getElementById('maxPlayersDisp').textContent=S.settings.maxPlayers;
+  document.getElementById('ramSlider').value=S.ram;
+  updateRamSlider(S.ram);
+  const ver=S.jarPath?(S.jarPath.match(/(\d+\.\d+[\.\d]*)/)?.[1]||'1.21.11'):'—';
+  document.getElementById('statVersion').textContent=ver;
+  ['online','whitelist','pvp'].forEach(k=>{const el=document.getElementById('toggle-'+k);if(el)S.settings[k]?el.classList.add('on'):el.classList.remove('on');});
+}
+
+function setHero(){
+  document.getElementById('heroName').textContent=S.serverName||'No Server';
+  const ver=S.jarPath?(S.jarPath.match(/(\d+\.\d+[\.\d]*)/)?.[1]||'1.21.11'):'—';
+  document.getElementById('heroSub').textContent=S.jarPath?'Minecraft '+ver+' · Paper':'Configure a server to get started';
+}
+
+function switchPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-icon').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='files')renderFiles();
+}
+
+function setStatus(status){
+  const sbDot=document.getElementById('sbStatus');
+  const chipDot=document.getElementById('chipDot');
+  const chipLabel=document.getElementById('chipLabel');
+  const launchBtn=document.getElementById('launchBtn');
+  const killBtn=document.getElementById('killBtn');
+  const srvDot=document.getElementById('srvDot');
+  const statStatus=document.getElementById('statStatus');
+  sbDot.className='sb-status '+(status==='stopped'?'':status);
+  chipDot.className='status-chip-dot '+(status==='stopped'?'':status);
+  srvDot.style.background=status==='running'?'var(--success)':status==='starting'?'var(--warn)':'var(--text3)';
+  if(status==='stopped'){
+    chipLabel.textContent='Offline';chipLabel.style.color='var(--text3)';
+    launchBtn.textContent='▶ LAUNCH';launchBtn.className='launch-btn';launchBtn.disabled=false;
+    killBtn.disabled=true;
+    statStatus.textContent='Offline';statStatus.style.color='var(--text3)';
+    document.getElementById('statRam').textContent='—';
+    document.getElementById('ramBarFill').style.width='0%';
+    document.getElementById('statUptime').textContent='—';
+    document.getElementById('statUptimeSub').textContent='not running';
+    document.getElementById('playersList').innerHTML='<div class="empty-state">No players online</div>';
+    document.getElementById('playerCount').textContent='0';
+    document.getElementById('infoPlayers').textContent='—';
+    if(S.uptimeInterval)clearInterval(S.uptimeInterval);
+    if(S.ramInterval)clearInterval(S.ramInterval);
+  }else if(status==='starting'){
+    chipLabel.textContent='Starting…';chipLabel.style.color='var(--warn)';
+    launchBtn.textContent='◌ STARTING…';launchBtn.disabled=true;
+    killBtn.disabled=false;
+    statStatus.textContent='Starting';statStatus.style.color='var(--warn)';
+  }else if(status==='running'){
+    chipLabel.textContent='Online';chipLabel.style.color='var(--success)';
+    launchBtn.textContent='⬛ STOP SERVER';launchBtn.className='launch-btn stopping';launchBtn.disabled=false;
+    killBtn.disabled=false;
+    statStatus.textContent='Online';statStatus.style.color='var(--success)';
+  }
+}
+
+async function toggleServer(){if(!S.running&&!S.starting)await startServer();else if(S.running)await stopServer();}
+
+async function startServer(){
+  if(!S.jarPath||!S.serverPath){notify('No server configured. Click Configure first.','error');return;}
+  S.starting=true;setStatus('starting');clearConsole();
+  appendLog('info','Launching: '+S.jarPath);
+  appendLog('info','RAM: '+S.ram+'MB · Port: '+S.port);
+  if(ipc){
+    const r=await ipc.serverStart({jarPath:S.jarPath,serverDir:S.serverPath,ram:S.ram,javaPath:document.getElementById('cfg-java').value||'java'});
+    if(!r.ok){S.starting=false;setStatus('stopped');appendLog('error',r.error);notify(r.error,'error');}
+  }else{simulateStartup();}
+}
+
+function simulateStartup(){
+  const lines=[[400,'info','Starting minecraft server version 1.21.11'],[700,'info','Loading properties'],[900,'info','Default game type: SURVIVAL'],[1100,'info','Preparing level "world"'],[1500,'info','Preparing start region for dimension minecraft:overworld'],[2200,'warn',"Can't keep up! Running 2010ms or 40 ticks behind"],[3000,'info','Preparing start region for dimension minecraft:the_nether'],[3600,'success','Done (3.624s)! For help, type "help"']];
+  lines.forEach(([d,t,m])=>setTimeout(()=>appendLog(t,m),d));
+  setTimeout(()=>{S.starting=false;S.running=true;S.uptimeStart=Date.now();setStatus('running');startUptimeCounter();startRamSim();notify('Server started!','success');setTimeout(()=>{appendLog('join','Sky joined the game');addPlayer('Sky');},2000);},4000);
+}
+
+async function stopServer(){
+  if(ipc)await ipc.serverStop();
+  else{appendLog('info','Stopping...');setTimeout(()=>{appendLog('success','Server stopped.');S.running=false;setStatus('stopped');},1200);}
+}
+
+async function killServer(){
+  if(ipc)await ipc.serverKill();
+  S.running=false;S.starting=false;setStatus('stopped');notify('Server force stopped','error');
+}
+
+function startUptimeCounter(){
+  if(S.uptimeInterval)clearInterval(S.uptimeInterval);
+  S.uptimeInterval=setInterval(()=>{
+    if(!S.running)return;
+    const e=Math.floor((Date.now()-S.uptimeStart)/1000);
+    const h=Math.floor(e/3600),m=Math.floor((e%3600)/60),s=e%60;
+    document.getElementById('statUptime').textContent=(h>0?h+'h ':'')+( m>0||h>0?m+'m ':'')+s+'s';
+    document.getElementById('statUptimeSub').textContent='since startup';
+  },1000);
+}
+
+function startRamSim(){
+  if(S.ramInterval)clearInterval(S.ramInterval);
+  let base=S.ram*.35;
+  S.ramInterval=setInterval(()=>{
+    if(!S.running)return;
+    base=Math.max(S.ram*.25,Math.min(S.ram*.8,base+(Math.random()-.4)*60));
+    const pct=(base/S.ram)*100;
+    document.getElementById('statRam').textContent=Math.round(base);
+    document.getElementById('statRamMax').textContent=S.ram;
+    const fill=document.getElementById('ramBarFill');
+    fill.style.width=pct+'%';
+    fill.style.background=pct>80?'var(--danger)':pct>60?'var(--warn)':'var(--accent)';
+  },2000);
+}
+
+function addPlayer(name){
+  const list=document.getElementById('playersList');
+  if(list.querySelector('.empty-state'))list.innerHTML='';
+  if(list.querySelector('[data-player="'+name+'"]'))return;
+  const row=document.createElement('div');row.className='player-row';row.dataset.player=name;
+  row.innerHTML='<div class="player-av">'+name[0].toUpperCase()+'</div><div class="player-name">'+name+'</div><div class="player-ping">'+Math.floor(Math.random()*40+5)+'ms</div>';
+  list.appendChild(row);updatePlayerCount();
+}
+
+function removePlayer(name){
+  const el=document.querySelector('[data-player="'+name+'"]');
+  if(el)el.remove();
+  if(!document.querySelector('.player-row'))document.getElementById('playersList').innerHTML='<div class="empty-state">No players online</div>';
+  updatePlayerCount();
+}
+
+function updatePlayerCount(){
+  const c=document.querySelectorAll('.player-row').length;
+  document.getElementById('playerCount').textContent=c;
+  document.getElementById('infoPlayers').textContent=c+'/'+S.settings.maxPlayers;
+}
+
+function clearConsole(){document.getElementById('consoleOutput').innerHTML='';}
+
+function appendLog(type,text){
+  const out=document.getElementById('consoleOutput');
+  const t=new Date().toTimeString().slice(0,8);
+  const ln=document.createElement('span');ln.className='log-line log-'+type;
+  ln.innerHTML='<span class="log-time">['+t+']</span>'+esc(text);
+  out.appendChild(ln);out.appendChild(document.createElement('br'));out.scrollTop=out.scrollHeight;
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function sendCmd(){
+  const inp=document.getElementById('consoleInput');const cmd=inp.value.trim();if(!cmd)return;
+  appendLog('success','> '+cmd);inp.value='';
+  if(!S.running){appendLog('error','Server not running.');return;}
+  if(ipc)await ipc.serverCommand(cmd);
+}
+
+async function renderFiles(){
+  const rows=document.getElementById('fileRows');
+  if(!S.currentDir){rows.innerHTML='<div class="empty-state">No server folder configured.</div>';return;}
+  let dir=S.currentDir;
+  for(const seg of S.currentPath)dir=dir.replace(/[\\/]$/,'')+'/'+seg;
+  rows.innerHTML='<div class="empty-state">Loading...</div>';
+  if(ipc){
+    const r=await ipc.fsList(dir);
+    if(!r.ok){rows.innerHTML='<div class="empty-state" style="color:var(--danger)">'+esc(r.error)+'</div>';return;}
+    renderFileRows(r.files,dir);
+  }else{
+    renderFileRows([{name:'plugins',type:'folder',size:'—',date:'2026-03-10'},{name:'world',type:'folder',size:'—',date:'2026-03-14'},{name:'paper-1.21.11.jar',type:'file',size:'45.2 MB',date:'2026-03-01'},{name:'server.properties',type:'file',size:'1.2 KB',date:'2026-03-14'},{name:'eula.txt',type:'file',size:'0.1 KB',date:'2026-03-01'},{name:'DeathToll-1.0.0.jar',type:'file',size:'24 KB',date:'2026-03-14'}],dir);
+  }
+}
+
+function renderFileRows(files,dir){
+  const rows=document.getElementById('fileRows');rows.innerHTML='';
+  if(S.currentPath.length>0){
+    const b=document.createElement('div');b.className='file-row';
+    b.innerHTML='<span class="file-icon">↩</span><span class="file-name" style="color:var(--text3)">..</span><span></span><span></span><span></span>';
+    b.onclick=()=>{S.currentPath.pop();renderFiles();updateBC();};rows.appendChild(b);
+  }
+  files.sort((a,b)=>a.type===b.type?a.name.localeCompare(b.name):a.type==='folder'?-1:1).forEach(f=>{
+    const row=document.createElement('div');row.className='file-row';
+    const sep=dir.includes('\\')?'\\':'/';
+    const fullPath=dir.replace(/[\\/]$/,'')+sep+f.name;
+    const icon=f.type==='folder'?'📁':fileIcon(f.name);
+    row.innerHTML='<span class="file-icon">'+icon+'</span><span class="file-name '+(f.type==='folder'?'folder':'')+'">'+esc(f.name)+'</span><span class="file-sz">'+f.size+'</span><span class="file-dt">'+f.date+'</span><span class="file-acts"><button class="fa-btn" data-action="open" data-path="'+esc(fullPath)+'">↗</button><button class="fa-btn del" data-action="delete" data-path="'+esc(fullPath)+'" data-name="'+esc(f.name)+'">✕</button></span>';
+    if(f.type==='folder'){row.onclick=()=>{S.currentPath.push(f.name);renderFiles();updateBC();};}
+    else{
+      row.querySelector('[data-action="open"]').addEventListener('click',e=>{e.stopPropagation();openFile(fullPath);});
+      row.querySelector('[data-action="delete"]').addEventListener('click',e=>{e.stopPropagation();deleteFile(fullPath,f.name);});
+    }
+    rows.appendChild(row);
+  });
+}
+
+function updateBC(){
+  const bc=document.getElementById('breadcrumb');
+  let h='<span class="bc-seg" data-nav="root">'+esc(S.serverName||'server')+'</span>';
+  S.currentPath.forEach((seg,i)=>h+='<span class="bc-sep"> / </span><span class="bc-seg" data-nav="'+i+'">'+esc(seg)+'</span>');
+  bc.innerHTML=h;
+  bc.querySelectorAll('[data-nav]').forEach(el=>{
+    el.addEventListener('click',()=>navigateTo(el.dataset.nav==='root'?'root':parseInt(el.dataset.nav)));
+  });
+}
+
+function navigateTo(idx){if(idx==='root')S.currentPath=[];else S.currentPath=S.currentPath.slice(0,idx+1);renderFiles();updateBC();}
+
+function fileIcon(n){
+  if(n.endsWith('.jar'))return'☕';if(n.endsWith('.yml')||n.endsWith('.yaml'))return'⚙';
+  if(n.endsWith('.json'))return'{}';if(n.endsWith('.txt'))return'📄';
+  if(n.endsWith('.log')||n.endsWith('.gz'))return'📋';if(n.endsWith('.properties'))return'⚙';return'📄';
+}
+
+async function openFile(p,e){e&&e.stopPropagation();if(ipc)await ipc.fsOpen(p);}
+
+async function deleteFile(p,name,e){
+  e&&e.stopPropagation();
+  if(!confirm('Delete "'+name+'"?'))return;
+  if(ipc){const r=await ipc.fsDelete(p);if(r.ok){notify('Deleted '+name,'error');renderFiles();}else notify('Error: '+r.error,'error');}
+  else{notify('Deleted '+name,'error');renderFiles();}
+}
+
+async function openFilePicker(){if(ipc){const files=await ipc.pickUploadFiles();if(files&&files.length)uploadFiles(files);}}
+
+function handleDragOver(e){e.preventDefault();document.getElementById('dropZone').classList.add('dragover');}
+function handleDragLeave(){document.getElementById('dropZone').classList.remove('dragover');}
+function handleDrop(e){
+  e.preventDefault();document.getElementById('dropZone').classList.remove('dragover');
+  const files=Array.from(e.dataTransfer.files).map(f=>f.path).filter(Boolean);
+  if(files.length)uploadFiles(files);
+}
+
+async function uploadFiles(filePaths){
+  if(!S.currentDir){notify('No server folder configured','error');return;}
+  let dir=S.currentDir;
+  const sep=dir.includes('\\')?'\\':'/';
+  for(const seg of S.currentPath)dir=dir.replace(/[\\/]$/,'')+sep+seg;
+  const queue=document.getElementById('uploadQueue');
+  for(const src of filePaths){
+    const name=src.split(/[\\/]/).pop();
+    const item=document.createElement('div');item.className='upload-item';
+    item.innerHTML='<div class="upload-name">'+esc(name)+'</div><div class="upload-bar"><div class="upload-fill" style="width:30%"></div></div><div class="upload-stat">Copying...</div>';
+    queue.appendChild(item);
+    const fill=item.querySelector('.upload-fill');const stat=item.querySelector('.upload-stat');
+    if(ipc){
+      const r=await ipc.fsCopy([src],dir);fill.style.width='100%';
+      if(r.ok&&r.results[0]?.ok){stat.textContent='Done ✓';stat.style.color='var(--success)';}
+      else{fill.style.background='var(--danger)';stat.textContent='Failed';stat.style.color='var(--danger)';}
+    }else{fill.style.width='100%';stat.textContent='Done ✓';stat.style.color='var(--success)';}
+    setTimeout(()=>item.remove(),2000);
+  }
+  setTimeout(renderFiles,300);
+}
+
+function updateRamSlider(v){
+  const mb=parseInt(v);S.ram=mb;
+  document.getElementById('ramDisplayVal').textContent=mb>=1024?(mb/1024).toFixed(mb%1024===0?0:1)+' GB':mb+' MB';
+  document.getElementById('cfg-ram').value=mb;document.getElementById('statRamMax').textContent=mb;
+  document.getElementById('infoRam').textContent=mb>=1024?(mb/1024).toFixed(1)+'G':mb+'M';
+}
+
+function openNewServerModal(){document.getElementById('newServerModal').classList.remove('hidden');}
+function closeNewServerModal(){document.getElementById('newServerModal').classList.add('hidden');}
+
+async function browseJar(){
+  if(!ipc)return;const p=await ipc.pickJar();
+  if(p){document.getElementById('new-jar').value=p;if(!document.getElementById('new-dir').value)document.getElementById('new-dir').value=p.replace(/[\\/][^\\/]+$/,'');}
+}
+async function browseDir(){if(!ipc)return;const p=await ipc.pickDir();if(p)document.getElementById('new-dir').value=p;}
+
+async function createServer(){
+  const name=document.getElementById('new-name').value.trim()||'My SMP';
+  const jar=document.getElementById('new-jar').value.trim();const dir=document.getElementById('new-dir').value.trim();
+  const port=parseInt(document.getElementById('new-port').value)||25565;const ram=parseInt(document.getElementById('new-ram').value)||2048;
+  if(!jar||!dir){notify('Fill in JAR path and server folder','error');return;}
+  S.serverName=name;S.jarPath=jar;S.serverPath=dir;S.currentDir=dir;S.port=port;S.ram=ram;S.currentPath=[];
+  applyToUI();updateBC();closeNewServerModal();
+  if(ipc)await saveAllSettings();
+  notify('Server "'+name+'" configured','success');
+}
+
+function toggleSetting(key){
+  S.settings[key]=!S.settings[key];
+  const el=document.getElementById('toggle-'+key);if(el)S.settings[key]?el.classList.add('on'):el.classList.remove('on');
+}
+
+function saveSettings(){
+  S.serverName=document.getElementById('cfg-name').value;S.port=parseInt(document.getElementById('cfg-port').value)||25565;
+  S.ram=parseInt(document.getElementById('cfg-ram').value)||2048;S.settings.maxPlayers=parseInt(document.getElementById('cfg-maxplayers').value)||20;
+  S.settings.motd=document.getElementById('cfg-motd').value;S.settings.gamemode=document.getElementById('cfg-gamemode').value;
+  S.settings.difficulty=document.getElementById('cfg-difficulty').value;applyToUI();saveAllSettings();
+}
+
+async function saveAllSettings(){if(ipc)await ipc.settingsSave({serverName:S.serverName,jarPath:S.jarPath,serverPath:S.serverPath,port:S.port,ram:S.ram,settings:S.settings});}
+
+function copyAddress(){const a='localhost:'+S.port;navigator.clipboard?.writeText(a);notify('Copied: '+a,'success');}
+
+function notify(msg,type='success'){
+  const el=document.getElementById('notif');el.textContent=msg;el.className='notif show '+type;
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+setStatus('stopped');setHero();renderFiles();
+
+// ══════════════════════════════════════════════════
+// EVENT WIRING — no inline handlers allowed in Electron
+// ══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {});
+
+// Titlebar
+document.getElementById('btn-close')?.addEventListener('click', () => window.api?.close());
+document.getElementById('btn-min')?.addEventListener('click', () => window.api?.minimize());
+document.getElementById('btn-max')?.addEventListener('click', () => window.api?.maximize());
+
+// Sidebar navigation
+['dashboard','console','files','settings','tunnel'].forEach(id => {
+  document.getElementById('nav-'+id)?.addEventListener('click', function() { switchPage(id, this); });
+});
+
+// Dashboard buttons
+document.getElementById('btn-new-server')?.addEventListener('click', openNewServerModal);
+document.getElementById('btn-copy-addr')?.addEventListener('click', copyAddress);
+document.getElementById('btn-refresh-info')?.addEventListener('click', () => notify('Refreshed','success'));
+document.getElementById('killBtn')?.addEventListener('click', killServer);
+document.getElementById('launchBtn')?.addEventListener('click', toggleServer);
+document.getElementById('btn-configure')?.addEventListener('click', openNewServerModal);
+
+// RAM slider
+document.getElementById('ramSlider')?.addEventListener('input', function() { updateRamSlider(this.value); });
+
+// Console
+document.getElementById('btn-clear-console')?.addEventListener('click', clearConsole);
+document.getElementById('btn-console-send')?.addEventListener('click', sendCmd);
+document.getElementById('consoleInput')?.addEventListener('keydown', e => { if(e.key==='Enter') sendCmd(); });
+
+// Files
+document.getElementById('btn-upload')?.addEventListener('click', openFilePicker);
+document.getElementById('btn-files-refresh')?.addEventListener('click', renderFiles);
+const dz = document.getElementById('dropZone');
+dz?.addEventListener('dragover', handleDragOver);
+dz?.addEventListener('dragleave', handleDragLeave);
+dz?.addEventListener('drop', handleDrop);
+dz?.addEventListener('click', openFilePicker);
+
+// Settings
+document.getElementById('btn-settings-save')?.addEventListener('click', () => { saveSettings(); notify('Saved','success'); });
+['cfg-name','cfg-port','cfg-maxplayers','cfg-motd','cfg-ram','cfg-java'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', saveSettings);
+});
+['cfg-gamemode','cfg-difficulty'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', saveSettings);
+});
+document.querySelectorAll('.toggle[data-key]').forEach(el => {
+  el.addEventListener('click', () => toggleSetting(el.dataset.key));
+});
+
+// Modal
+document.getElementById('btn-modal-close')?.addEventListener('click', closeNewServerModal);
+document.getElementById('btn-modal-cancel')?.addEventListener('click', closeNewServerModal);
+document.getElementById('btn-modal-save')?.addEventListener('click', createServer);
+document.getElementById('btn-browse-jar')?.addEventListener('click', browseJar);
+document.getElementById('btn-browse-dir')?.addEventListener('click', browseDir);
+
+// Close modal on overlay click
+document.getElementById('newServerModal')?.addEventListener('click', function(e) {
+  if(e.target === this) closeNewServerModal();
+});
+// ══════════════════════════════════════════════════
+// TUNNEL (playit.gg)
+// ══════════════════════════════════════════════════
+let tunnelRunning = false;
+
+function tunnelLog(type, text) {
+  const log = document.getElementById('tunnelLog');
+  if (!log) return;
+  const t = new Date().toTimeString().slice(0,8);
+  const ln = document.createElement('span');
+  ln.style.display = 'block';
+  ln.style.color = type==='error'?'var(--danger)':type==='success'?'var(--success)':type==='warn'?'var(--warn)':'#7a8898';
+  ln.textContent = '['+t+'] ' + text;
+  log.appendChild(ln);
+  log.scrollTop = log.scrollHeight;
+
+  // Try to detect the tunnel address from output — catch all playit formats
+  const addrMatch =
+    text.match(/(\S+\.playit\.gg(?::\d+)?)/i) ||
+    text.match(/tcp:\/\/(\S+)/i) ||
+    text.match(/udp:\/\/(\S+)/i) ||
+    text.match(/address[:\s]+(\S+\.gg\S*)/i) ||
+    text.match(/connect(?:ing)? to[:\s]+(\S+)/i) ||
+    text.match(/tunnel[:\s]+(\S+\.\S+:\d+)/i) ||
+    text.match(/(\d+\.\d+\.\d+\.\d+:\d+)/);  // raw IP:PORT fallback
+  if (addrMatch) {
+    const found = addrMatch[1] || addrMatch[0];
+    // Filter out obvious non-addresses
+    if (!found.includes('error') && !found.includes('warn') && found.length < 60) {
+      const addr = document.getElementById('tunnelAddress');
+      if (addr) { addr.textContent = found; addr.style.color = 'var(--accent)'; }
+    }
+  }
+  // Detect claim URL
+  const claimMatch = text.match(/(https:\/\/playit\.gg\/claim\/\S+)/i) || text.match(/(https:\/\/\S*playit\S*claim\S*)/i);
+  if (claimMatch && ipc) {
+    tunnelLog('info', '👆 Click to claim: opening browser...');
+    ipc.playitOpenBrowser();
+  }
+}
+
+function setTunnelStatus(running) {
+  tunnelRunning = running;
+  const dot = document.getElementById('tunnelChipDot');
+  const label = document.getElementById('tunnelChipLabel');
+  const btn = document.getElementById('btn-playit-toggle');
+  if (dot) { dot.className = 'status-chip-dot' + (running ? ' running' : ''); }
+  if (label) { label.textContent = running ? 'Online' : 'Offline'; label.style.color = running ? 'var(--success)' : 'var(--text3)'; }
+  if (btn) { btn.textContent = running ? '⬛ Stop' : '▶ Start'; btn.className = 'btn btn-sm ' + (running ? 'btn-danger' : 'btn-primary'); }
+  if (!running) {
+    const addr = document.getElementById('tunnelAddress');
+    if (addr) { addr.textContent = 'Not connected — start the tunnel to get your address'; addr.style.color = 'var(--text3)'; }
+  }
+}
+
+if (ipc) {
+  ipc.onPlayitLog(({type, text}) => tunnelLog(type, text));
+  ipc.onPlayitStopped(() => { setTunnelStatus(false); tunnelLog('info', 'Tunnel stopped.'); });
+
+  // Check initial status
+  ipc.playitStatus().then(s => {
+    setTunnelStatus(s.running);
+    const installBtn = document.getElementById('btn-playit-install');
+    if (installBtn && s.installed) {
+      installBtn.textContent = '✓ Installed';
+      installBtn.disabled = true;
+    }
+  });
+}
+
+document.getElementById('btn-playit-install')?.addEventListener('click', async function() {
+  if (!ipc) return;
+  this.textContent = 'Downloading...';
+  this.disabled = true;
+  tunnelLog('info', 'Installing playit agent...');
+  const r = await ipc.playitInstall();
+  if (r.ok) { this.textContent = '✓ Installed'; notify('playit installed!', 'success'); }
+  else { this.textContent = 'Install'; this.disabled = false; tunnelLog('error', r.error); notify('Install failed: '+r.error, 'error'); }
+});
+
+document.getElementById('btn-playit-signup')?.addEventListener('click', () => {
+  if (ipc) ipc.playitOpenBrowser();
+});
+
+document.getElementById('btn-playit-toggle')?.addEventListener('click', async function() {
+  if (!ipc) return;
+  if (!tunnelRunning) {
+    tunnelLog('info', 'Starting playit agent...');
+    const r = await ipc.playitStart();
+    if (r.ok) { setTunnelStatus(true); }
+    else { tunnelLog('error', r.error); notify(r.error, 'error'); }
+  } else {
+    await ipc.playitStop();
+    setTunnelStatus(false);
+  }
+});
+
+document.getElementById('btn-set-address')?.addEventListener('click', () => {
+  const input = document.getElementById('tunnelAddressInput');
+  const val = input?.value.trim();
+  if (val) {
+    const addr = document.getElementById('tunnelAddress');
+    if (addr) { addr.textContent = val; addr.style.color = 'var(--accent)'; }
+    input.value = '';
+    notify('Address set!', 'success');
+  }
+});
+
+document.getElementById('tunnelAddressInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-set-address')?.click();
+});
+
+document.getElementById('btn-playit-clear')?.addEventListener('click', () => {
+  const log = document.getElementById('tunnelLog');
+  if (log) log.innerHTML = '';
+});
+
+document.getElementById('link-playit-dashboard')?.addEventListener('click', e => {
+  e.preventDefault();
+  if (ipc) ipc.playitOpenBrowser();
+});
+
+</script>
+</body>
+</html>
